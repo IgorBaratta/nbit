@@ -1,7 +1,7 @@
 #!bin/bash
 
 compiler="g++ clang++"
-standard="c++11 c++14 c++17 c++2a"
+standard="c++11 c++14 c++17"
 # compiler="g++"
 # standard="c++17"
 
