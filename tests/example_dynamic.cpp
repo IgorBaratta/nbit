@@ -9,6 +9,7 @@ int main()
 
     // create dynamic set and include vector
     nbit::set dynamic_set;
+    assert(dynamic_set.empty());
     dynamic_set.insert(vec.begin(), vec.end());
 
     // check number of unique values in the set

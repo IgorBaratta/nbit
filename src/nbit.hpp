@@ -22,27 +22,31 @@ namespace nbit
         std::size_t _counter;
 
     public:
-        // Default constructor, construct and empty
+        // Default constructor, construct an empty set
         set() : _num_groups{0}, _mask(0), _counter{0} {}
 
-        // -----------------------------------------------------
+        // -------------------------------------------------------
         // Create a bit map supporting at least max_value elements
         set(std::size_t max_value)
             : _num_groups{(max_value / _group_size) + 1},
               _mask(_num_groups, 0),
               _counter{0} {}
 
+        // Create a bitset from a container of intergers.
+        template <typename Container>
+        set(Container &c) : set()
+        {
+            insert(c.begin(), c.end());
+        }
+
         // -----------------------------------------------------
         ~set() {} // default destructor
 
-        /// Inserts a single element into the bit map,
+        /// Inserts a single element into the bit set,
         /// Resize cointainer to fit
-        inline void insert(const std::size_t k) noexcept
-        {
-            insert_single(k);
-        }
+        inline void insert(const std::size_t k) noexcept { insert_single(k); }
 
-        /// Inserts elements from range [first, last) into the bit map
+        /// Inserts elements from range [first, last) into the bit set
         template <typename Iter>
         inline void insert(const Iter begin, const Iter end)
         {
@@ -50,8 +54,11 @@ namespace nbit
                 insert_single(*it);
         }
 
-        /// Clears all data, without resizing the bitmask.
-        /// @complexity: Linear in the size of the bitmask.
+        /// Erase a single element from the set.
+        void erase(const std::size_t key) noexcept { erase_single(key); };
+
+        /// Clears all data, without resizing the bit set.
+        /// @complexity: Linear in the size of the bit set.
         void clear() noexcept
         {
             std::fill(_mask.begin(), _mask.end(), 0);
@@ -62,7 +69,8 @@ namespace nbit
         /// @parameters: (none)
         std::size_t size() const { return _counter; }
 
-        /// returns the number of elements the set can hold
+        /// returns the number of elements the set can hold,
+        /// capacity without further resizing
         /// @parameters: (none)
         std::size_t max_size() const { return _group_size * _num_groups; }
 
@@ -81,7 +89,8 @@ namespace nbit
 
         /// returns the maximum set value in the bit map
         /// @note: if the map is empty the return value is undefined
-        std::uint64_t maximum() const
+        std::uint64_t
+        maximum() const
         {
             if (!empty())
             {
@@ -106,9 +115,6 @@ namespace nbit
             }
             return -1;
         }
-
-        template <typename T>
-        void erase(const T &key){};
 
         bool empty() const noexcept { return (_counter == 0); }
 
@@ -158,6 +164,21 @@ namespace nbit
                 ++_counter;
             }
         }
+        // -----------------------------------------------------
+        inline void erase_single(const std::uint64_t key) noexcept
+        {
+            if (key < max_size())
+            {
+                std::size_t group = key >> _exp;
+                std::size_t pos = key & (_group_size - 1);
+                std::uint64_t mask = (1UL << pos);
+                if ((_mask[group] & (mask)))
+                {
+                    _mask[group] ^= mask;
+                    --_counter;
+                }
+            }
+        }
 
         // -----------------------------------------------------
         template <typename T>
@@ -178,12 +199,12 @@ namespace nbit
             }
             return out;
         }
-    };
+    }; // namespace nbit
 
     //=====================================================================//
-    // Compile time fixed size map
+    // Compile time fixed size bit set of soze N
     template <std::size_t N = DEFAULT_BLOCK_SIZE>
-    class nset : public set<true>
+    class nset : public set<false>
     {
     public:
         nset() : set(N - 1) {}
