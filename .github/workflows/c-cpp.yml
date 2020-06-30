@@ -1,4 +1,4 @@
-name: C/C++ CI
+name: C++ CI
 
 on:
   push:
@@ -15,3 +15,8 @@ jobs:
     - uses: actions/checkout@v2
     - name: cmake and build
       run: mkdir build && cd build && cmake .. && make
+    - name: run tests
+      run: |
+            cd tests/
+            source run_all.sh
+    
