@@ -1,9 +1,7 @@
+#pragma once
+
 #include <algorithm>
-#include <array>
-#include <bitset>
 #include <cstdint>
-#include <immintrin.h>
-#include <iostream>
 #include <vector>
 
 #define IS_POWER_OF_TWO(N) (__builtin_popcountll(N) == 1)
@@ -13,6 +11,7 @@
 
 namespace nbit
 {
+    template <bool DynamicResize = true>
     class set
     {
     protected:
@@ -23,7 +22,7 @@ namespace nbit
         std::size_t _counter;
 
     public:
-        // Default constructor
+        // Default constructor, construct and empty
         set() : _num_groups{0}, _mask(0), _counter{0} {}
 
         // -----------------------------------------------------
@@ -40,8 +39,6 @@ namespace nbit
         /// Resize cointainer to fit
         inline void insert(const std::size_t k) noexcept
         {
-            if (k > max_size())
-                resize(k);
             insert_single(k);
         }
 
@@ -148,10 +145,12 @@ namespace nbit
 
     private:
         // -----------------------------------------------------
-        inline void insert_single(const std::uint64_t v) noexcept
+        inline void insert_single(const std::uint64_t key) noexcept
         {
-            std::size_t group = v >> _exp;
-            std::size_t pos = v & (_group_size - 1);
+            if (key >= max_size())
+                resize(key);
+            std::size_t group = key >> _exp;
+            std::size_t pos = key & (_group_size - 1);
             std::uint64_t mask = (1UL << pos);
             if (!(_mask[group] & (mask)))
             {
@@ -184,7 +183,7 @@ namespace nbit
     //=====================================================================//
     // Compile time fixed size map
     template <std::size_t N = DEFAULT_BLOCK_SIZE>
-    class nset : public nset
+    class nset : public set<true>
     {
     public:
         nset() : set(N - 1) {}
@@ -271,7 +270,7 @@ namespace nbit
             {
                 _indices[block_num] = _num_blocks;
                 _num_blocks += 1;
-                _map_array.push_back({bitmap<N>(), block_num});
+                _map_array.push_back({nset<N>(), block_num});
             }
             return _indices[block_num];
         }
