@@ -81,7 +81,9 @@ namespace nbit
             return decode_simple<T>(offset);
         }
 
-        void resize(std::size_t new_max)
+        // resize bit set to support indices up to new_max
+        template <bool U = DynamicResize>
+        typename std::enable_if<U>::type resize(std::size_t new_max)
         {
             _num_groups = std::max((new_max / _group_size) + 1, _num_groups);
             _mask.resize(_num_groups);
@@ -116,9 +118,12 @@ namespace nbit
             return -1;
         }
 
+        /// Test whether the bit set is empty
         bool empty() const noexcept { return (_counter == 0); }
 
-        void shrink_to_fit()
+        /// Requests the container to reduce its capacity to fit its size.
+        template <bool U = DynamicResize>
+        typename std::enable_if<U>::type shrink_to_fit()
         {
             auto last_nz = std::find_if(_mask.rbegin(), _mask.rend(), [](std::uint64_t x) { return x; });
             _num_groups = _num_groups - std::distance(_mask.rbegin(), last_nz);
@@ -164,6 +169,7 @@ namespace nbit
                 ++_counter;
             }
         }
+
         // -----------------------------------------------------
         inline void erase_single(const std::uint64_t key) noexcept
         {
@@ -209,107 +215,141 @@ namespace nbit
     public:
         nset() : set(N - 1) {}
         ~nset() {} // default destructor
-    };
 
-    //=====================================================================//
-    /// Dynamic compressed bit map
-    template <std::size_t N = DEFAULT_BLOCK_SIZE>
-    class compressed_set
-    {
-    public:
-        std::size_t _block_size;
-        std::uint16_t _exp;
-        std::vector<std::int64_t> _indices;
-        std::vector<std::pair<nset<N>, std::size_t>> _map_array;
-        std::size_t _num_blocks{0};
+        inline void insert(const std::size_t k) noexcept { insert_single(k); }
+        inline void erase(const std::size_t k) noexcept { erase_single(k); }
 
-    public:
-        compressed_set() {}
-
-        compressed_set(std::size_t max_value, std::size_t min_blocks = 1)
-            : _block_size(N),
-              _exp{LOG2_OF_P2(N)},
-              _indices((max_value / _block_size) + 1, UNDEFINED_BLOCK)
-        {
-            _map_array.reserve(min_blocks);
-            static_assert(IS_POWER_OF_TWO(N), "Template parameter should be power of two.");
-        }
-
-        ~compressed_set() {} // default destructor
-
-        // attempt to preallocate enough memory for nblocks
-        void reserve(std::size_t nblocks)
-        {
-            _map_array.reserve(nblocks);
-        }
-
-        /// Inserts a single element into the bit map,
-        inline void insert(const std::size_t key) noexcept
-        {
-            insert_single(key);
-        }
-
-        /// Inserts elements from range [first, last) into the bit map
+        /// Inserts elements from range [first, last) into the bit set
         template <typename Iter>
         inline void insert(const Iter begin, const Iter end)
         {
             for (Iter it = begin; it != end; ++it)
-                insert_uncked(*it);
-        }
-
-        /// count nonzeros
-        std::size_t count()
-        {
-            std::size_t counter = 0;
-            for (size_t i = 0; i < _num_blocks; i++)
-                counter += _map_array[i].first.size();
-            return counter;
-        }
-
-        template <typename T>
-        std::vector<T> decode()
-        {
-            std::vector<T> output;
-            std::size_t nz = count();
-            output.reserve(nz);
-            for (size_t i = 0; i < _num_blocks; i++)
-            {
-                std::size_t offset = _map_array[i].second * N;
-                std::vector<T> vec = _map_array[i].first.decode(offset);
-                output.insert(output.end(), vec.begin(), vec.end());
-            }
-            return output;
+                insert_single(*it);
         }
 
     private:
-        inline std::size_t check_and_resize(const std::size_t block_num)
+        inline void insert_single(const std::uint64_t key) noexcept
         {
-            if (block_num >= _indices.size())
-                _indices.resize(block_num + 1, -1);
-
-            if (_indices[block_num] == -1)
+            std::size_t group = key >> _exp;
+            std::size_t pos = key & (_group_size - 1);
+            std::uint64_t mask = (1UL << pos);
+            if (!(_mask[group] & (mask)))
             {
-                _indices[block_num] = _num_blocks;
-                _num_blocks += 1;
-                _map_array.push_back({nset<N>(), block_num});
+                _mask[group] |= mask;
+                ++_counter;
             }
-            return _indices[block_num];
         }
 
-        inline void insert_single(const std::size_t key)
+        inline void
+        erase_single(const std::uint64_t key) noexcept
         {
-            std::uint16_t short_key = key & (N - 1);
-            std::size_t block_num = key >> _exp;
-            std::size_t block_pos = check_and_resize(block_num);
-            _map_array[block_pos].first.insert(short_key);
-        }
-
-        inline void insert_uncked(const std::size_t key)
-        {
-            std::uint16_t short_key = key & (N - 1);
-            std::size_t block_num = key >> _exp;
-            std::size_t block_pos = _indices[block_num];
-            _map_array[block_pos].first.insert(short_key);
+            std::size_t group = key >> _exp;
+            std::size_t pos = key & (_group_size - 1);
+            std::uint64_t mask = (1UL << pos);
+            if ((_mask[group] & (mask)))
+            {
+                _mask[group] ^= mask;
+                --_counter;
+            }
         }
     };
+
+    //=====================================================================//
+    // /// Dynamic compressed bit map
+    // template <std::size_t N = DEFAULT_BLOCK_SIZE>
+    // class compressed_set
+    // {
+    // public:
+    //     std::size_t _block_size;
+    //     std::uint16_t _exp;
+    //     std::unordered_map<std::size_t, nset<N>> _set_array;
+
+    // public:
+    //     compressed_set() {}
+
+    //     compressed_set(std::size_t min_blocks = 1)
+    //         : _block_size(N),
+    //           _exp{LOG2_OF_P2(N)}
+    //     {
+    //         _map_array.reserve(min_blocks);
+    //         static_assert(IS_POWER_OF_TWO(N), "Template parameter should be power of two.");
+    //     }
+
+    //     ~compressed_set() {} // default destructor
+
+    //     // attempt to preallocate enough memory for nblocks
+    //     void reserve(std::size_t nblocks)
+    //     {
+    //         _map_array.reserve(nblocks);
+    //     }
+
+    //     /// Inserts a single element into the bit map,
+    //     inline void insert(const std::size_t key) noexcept
+    //     {
+    //         insert_single(key);
+    //     }
+
+    //     /// Inserts elements from range [first, last) into the bit map
+    //     template <typename Iter>
+    //     inline void insert(const Iter begin, const Iter end)
+    //     {
+    //         for (Iter it = begin; it != end; ++it)
+    //             insert_uncked(*it);
+    //     }
+
+    //     /// count nonzeros
+    //     std::size_t count()
+    //     {
+    //         std::size_t counter = 0;
+    //         for (size_t i = 0; i < _num_blocks; i++)
+    //             counter += _map_array[i].first.size();
+    //         return counter;
+    //     }
+
+    //     template <typename T>
+    //     std::vector<T> decode()
+    //     {
+    //         std::vector<T> output;
+    //         std::size_t nz = count();
+    //         output.reserve(nz);
+    //         for (size_t i = 0; i < _num_blocks; i++)
+    //         {
+    //             std::size_t offset = _map_array[i].second * N;
+    //             std::vector<T> vec = _map_array[i].first.decode(offset);
+    //             output.insert(output.end(), vec.begin(), vec.end());
+    //         }
+    //         return output;
+    //     }
+
+    // private:
+    //     inline std::size_t check_and_resize(const std::size_t block_num)
+    //     {
+    //         if (block_num >= _indices.size())
+    //             _indices.resize(block_num + 1, -1);
+
+    //         if (_indices[block_num] == -1)
+    //         {
+    //             _indices[block_num] = _num_blocks;
+    //             _num_blocks += 1;
+    //             _map_array.push_back({nset<N>(), block_num});
+    //         }
+    //         return _indices[block_num];
+    //     }
+
+    //     inline void insert_single(const std::size_t key)
+    //     {
+    //         std::uint16_t short_key = key & (N - 1);
+    //         std::size_t block_num = key >> _exp;
+    //         std::size_t block_pos = check_and_resize(block_num);
+    //         _map_array[block_pos].first.insert(short_key);
+    //     }
+
+    //     inline void insert_uncked(const std::size_t key)
+    //     {
+    //         std::uint16_t short_key = key & (N - 1);
+    //         std::size_t block_num = key >> _exp;
+    //         std::size_t block_pos = _indices[block_num];
+    //         _map_array[block_pos].first.insert(short_key);
+    //     }
+    // };
 } // namespace nbit

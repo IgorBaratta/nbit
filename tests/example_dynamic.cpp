@@ -1,27 +1,42 @@
 #include "../src/nbit.hpp"
 #include <cassert>
 #include <iostream>
+#include <numeric>
+#include <omp.h>
+#include <unordered_set>
 #include <vector>
 
 int main()
 {
-    std::vector<std::int64_t> vec{1, 4, 2, 15, 25, 20, 1, 64};
+    std::size_t sz = 1UL << 16;
+    std::size_t cc = 10000;
+    std::vector<std::int64_t> vec(sz);
+    std::iota(vec.begin(), vec.end(), 0);
 
-    // create dynamic set and include vector
-    nbit::set dynamic_set;
-    assert(dynamic_set.empty());
-    dynamic_set.insert(vec.begin(), vec.end());
+    // create fixed size bit set supporting integers up to 1024
 
-    // check number of unique values in the set
-    assert(dynamic_set.size() == 7);
+    double start = omp_get_wtime();
+    nbit::nset<1UL << 16> fixed_bitset;
+    for (size_t i = 0; i < cc; i++)
+        fixed_bitset.insert(vec.begin(), vec.end());
+    double elapsed = omp_get_wtime() - start;
+    std::cout << elapsed;
 
-    // check for capacity without resizing
-    assert(dynamic_set.max_size() == 128);
+    start = omp_get_wtime();
+    nbit::set dynamic_bitset;
+    for (size_t i = 0; i < cc; i++)
+        dynamic_bitset.insert(vec.begin(), vec.end());
+    elapsed = omp_get_wtime() - start;
+    std::cout << "\n"
+              << elapsed;
 
-    // decode bitset into a vector of ordered unique values
-    std::vector<int> unique_values = dynamic_set.decode<int>();
-
-    assert((unique_values == std::vector<int>({1, 2, 4, 15, 20, 25, 64})));
+    start = omp_get_wtime();
+    std::unordered_set<int> set;
+    for (size_t i = 0; i < cc; i++)
+        set.insert(vec.begin(), vec.end());
+    elapsed = omp_get_wtime() - start;
+    std::cout << "\n"
+              << elapsed << "\n";
 
     return 0;
 }

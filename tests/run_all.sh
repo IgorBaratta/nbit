@@ -14,6 +14,8 @@ do
         echo "Using $cpp -std=$std"
         $cpp -g -std=$std tests_main.cpp -c
         $cpp -g -std=$std tests_dynamic.cpp -c
-        $cpp -g -std=$std tests_main.o tests_dynamic.o -o tests.out && ./tests.out --reporter compact --success
+        $cpp -g -std=$std tests_fixed.cpp -c
+        $cpp -g -std=$std tests_main.o tests_dynamic.o tests_fixed.o -o tests.out 
+        ./tests.out --reporter compact --success
     done
 done
