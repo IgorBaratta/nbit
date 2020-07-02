@@ -1,42 +1,25 @@
-#include "../src/nbit.hpp"
+#include "../src/set.hpp"
+#include <algorithm>
 #include <cassert>
-#include <iostream>
 #include <numeric>
-#include <omp.h>
-#include <unordered_set>
 #include <vector>
 
 int main()
 {
-    std::size_t sz = 1UL << 16;
-    std::size_t cc = 10000;
-    std::vector<std::int64_t> vec(sz);
-    std::iota(vec.begin(), vec.end(), 0);
+    std::uint64_t offset = 10'000'000'000;
 
-    // create fixed size bit set supporting integers up to 1024
+    // Create vector and s
+    std::vector<std::int64_t> vec(64);
+    std::iota(vec.begin(), vec.end(), offset);
+    std::random_shuffle(vec.begin(), vec.end());
 
-    double start = omp_get_wtime();
-    nbit::nset<1UL << 16> fixed_bitset;
-    for (size_t i = 0; i < cc; i++)
-        fixed_bitset.insert(vec.begin(), vec.end());
-    double elapsed = omp_get_wtime() - start;
-    std::cout << elapsed;
+    nbit::set<true> dynamic_set;
+    auto input_map = [=](std::uint64_t a) -> std::uint64_t { return a - offset; };
+    auto output_map = [=](std::uint64_t a) -> std::uint64_t { return a + offset; };
 
-    start = omp_get_wtime();
-    nbit::set dynamic_bitset;
-    for (size_t i = 0; i < cc; i++)
-        dynamic_bitset.insert(vec.begin(), vec.end());
-    elapsed = omp_get_wtime() - start;
-    std::cout << "\n"
-              << elapsed;
+    for (auto value : vec)
+        dynamic_set.insert(value, input_map);
 
-    start = omp_get_wtime();
-    std::unordered_set<int> set;
-    for (size_t i = 0; i < cc; i++)
-        set.insert(vec.begin(), vec.end());
-    elapsed = omp_get_wtime() - start;
-    std::cout << "\n"
-              << elapsed << "\n";
-
-    return 0;
+    auto sorted_vec = dynamic_set.decode<std::uint64_t>(output_map);
+    assert(offset == sorted_vec[0]);
 }

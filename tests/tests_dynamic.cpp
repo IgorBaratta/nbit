@@ -1,4 +1,4 @@
-#include "../src/nbit.hpp"
+#include "../src/set.hpp"
 #include "catch2/catch.hpp"
 
 TEST_CASE("Test insert dynamic resizing")
@@ -59,4 +59,15 @@ TEST_CASE("Create bitset from container and clear and modify content")
   // decode bitset into a vector, output vector should be empty
   std::vector<int> unique_values = dynamic_set.decode<int>();
   REQUIRE((unique_values == std::vector<int>({13})));
+}
+
+TEST_CASE("Test assignment and comparison")
+{
+  std::vector<std::int64_t> vec{1, 4, 2, 15, 25, 20, 1, 64};
+  nbit::set set1(vec);
+  nbit::set set2(set1);
+  REQUIRE(set1 == set2);
+  set2.erase(64);
+  set2.shrink_to_fit();
+  REQUIRE((set1 != set2));
 }
