@@ -9,8 +9,8 @@
 // copies of the Software, and to permit persons to whom the Software is
 // furnished to do so, subject to the following conditions:
 //
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
 //
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 // IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -129,27 +129,24 @@ namespace nbit
 
         bool operator==(const set &other) const
         {
-            return std::equal(this->cbegin(), this->cend(),
-                              other.cbegin(), other.cend());
+            return std::equal(this->cbegin(), this->cend(), other.cbegin(),
+                              other.cend());
         }
 
-        bool operator!=(const set &other) const
-        {
-            return !(*this == other);
-        }
+        bool operator!=(const set &other) const { return !(*this == other); }
 
         set &operator&=(const set &other)
         {
-            std::transform(this->cbegin(), this->cend(), other.cbegin(),
-                           this->begin(), std::bit_and<std::uint64_t>());
+            std::transform(this->cbegin(), this->cend(), other.cbegin(), this->begin(),
+                           std::bit_and<std::uint64_t>());
             return *this;
         }
 
         set &operator|=(const set &other)
         {
             resize_to_fit(other.maximum());
-            std::transform(other.cbegin(), other.cend(), this->cbegin(),
-                           this->begin(), std::bit_or<std::uint64_t>());
+            std::transform(other.cbegin(), other.cend(), this->cbegin(), this->begin(),
+                           std::bit_or<std::uint64_t>());
             return *this;
         }
 
@@ -158,8 +155,8 @@ namespace nbit
             std::size_t upper_bound = std::min(this->maximum(), other.maximum());
             set<DynamicResize> new_set(upper_bound);
             std::size_t num_groups = new_set._array.size();
-            std::transform(this->begin(), this->begin() + num_groups, other.begin(), new_set.begin(),
-                           std::bit_and<std::uint64_t>());
+            std::transform(this->begin(), this->begin() + num_groups, other.begin(),
+                           new_set.begin(), std::bit_and<std::uint64_t>());
             return new_set;
         }
 
@@ -168,15 +165,15 @@ namespace nbit
             if (this->maximum() > other.maximum())
             {
                 set<DynamicResize> new_set = *this;
-                std::transform(other.cbegin(), other.cend(), new_set.begin(), new_set.begin(),
-                               std::bit_or<std::uint64_t>());
+                std::transform(other.cbegin(), other.cend(), new_set.begin(),
+                               new_set.begin(), std::bit_or<std::uint64_t>());
                 return new_set;
             }
             else
             {
                 set<DynamicResize> new_set = other;
-                std::transform(this->cbegin(), this->cend(), new_set.begin(), new_set.begin(),
-                               std::bit_or<std::uint64_t>());
+                std::transform(this->cbegin(), this->cend(), new_set.begin(),
+                               new_set.begin(), std::bit_or<std::uint64_t>());
                 return new_set;
             }
         }
@@ -186,15 +183,15 @@ namespace nbit
             if (this->maximum() > other.maximum())
             {
                 set<DynamicResize> new_set = *this;
-                std::transform(other.cbegin(), other.cend(), new_set.begin(), new_set.begin(),
-                               std::bit_xor<std::uint64_t>());
+                std::transform(other.cbegin(), other.cend(), new_set.begin(),
+                               new_set.begin(), std::bit_xor<std::uint64_t>());
                 return new_set;
             }
             else
             {
                 set<DynamicResize> new_set = other;
-                std::transform(this->cbegin(), this->cend(), new_set.begin(), new_set.begin(),
-                               std::bit_xor<std::uint64_t>());
+                std::transform(this->cbegin(), this->cend(), new_set.begin(),
+                               new_set.begin(), std::bit_xor<std::uint64_t>());
                 return new_set;
             }
         }
@@ -289,7 +286,8 @@ namespace nbit
         /// Return a const iterator poiting to past-last nonzero group in the set
         std::vector<std::uint64_t>::const_iterator nz_end() const noexcept
         {
-            auto reserse_last = std::find_if(_array.rbegin(), _array.rend(), [](std::uint64_t x) { return x; });
+            auto reserse_last = std::find_if(_array.rbegin(), _array.rend(),
+                                             [](std::uint64_t x) { return x; });
             return reserse_last.base();
         }
 
@@ -327,7 +325,9 @@ namespace nbit
         template <typename T, typename Function>
         std::vector<T> decode_simple(Function fn)
         {
-            static_assert(std::is_integral<T>::value, "Decode type is not integral type");
+            static_assert(std::is_integral<T>::value,
+                          "Decode type is not integral type");
+
             std::vector<T> out(count());
             std::size_t pos = 0;
             for (auto it = nz_begin(); it != nz_end(); it++)
