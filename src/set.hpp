@@ -35,7 +35,6 @@
 
 namespace nbit
 {
-
     using iterator = std::vector<std::uint64_t>::iterator;
     using const_iterator = std::vector<std::uint64_t>::const_iterator;
 
@@ -43,17 +42,27 @@ namespace nbit
     class set
     {
     public:
-        /// Default constructor, construct an empty set
-        set() : _array(0) {}
+        ///@{@name Constructor
 
-        /// Create a bit map supporting at least max_value elements
+        /// Default constructor, construct an empty set
+        set() = default;
+
+        /// Creates a bit set supporting at least max_value elements
         set(const std::size_t max_value) : _array((max_value / _group_size) + 1, 0) {}
 
-        /// copy consctructor
-        set(const set &x) : _array(x._array) {}
+        /// Copy consctructor
+        set(const set &other) : _array(other._array) {}
 
-        /// move constructor
+        /// Move constructor
         set(set &&x) { _array.swap(x._array); }
+
+        /// Creates a bit set from a list of integer values.
+        template <typename T>
+        set &operator=(std::initializer_list<T> ilist)
+        {
+            static_assert(std::is_integral<T>::value);
+            insert(ilist.begin(), ilist.end());
+        }
 
         /// Create a bitset from a container of intergers.
         template <typename Container>
@@ -63,7 +72,21 @@ namespace nbit
             insert(c.begin(), c.end());
         }
 
-        ~set() {} // default destructor
+        set &operator=(const set &other) = default;
+        set &operator=(set &&other) noexcept = default;
+
+        ///@}
+
+        ///@{@name Destructor
+
+        /// Default destructor
+        ~set() = default;
+        ///@}
+
+        ///@{@name Modifiers
+
+        /// Clears all data, without resizing the bit set
+        void clear() noexcept { std::fill(begin(), end(), 0); }
 
         /// Inserts a single element into the bit set
         template <bool U = DynamicResize>
@@ -72,6 +95,14 @@ namespace nbit
             if constexpr (U)
                 resize_to_fit(key);
             insert_single(key);
+        }
+
+        /// Resizes the bit set to support a new max index.
+        template <bool U = DynamicResize>
+        typename std::enable_if<U, void>::type resize(std::size_t new_max)
+        {
+            std::size_t num_groups = (new_max / _group_size) + 1;
+            _array.resize(num_groups, 0);
         }
 
         /// Inserts a single element into the bit set after the applciation of a
@@ -87,7 +118,7 @@ namespace nbit
 
         /// Inserts elements from range [first, last) into the bit set
         template <bool U = DynamicResize, typename Iter>
-        inline void insert(const Iter begin, const Iter end)
+        void insert(const Iter begin, const Iter end)
         {
             if constexpr (U)
                 resize_to_fit(*std::max_element(begin, end));
@@ -95,12 +126,45 @@ namespace nbit
                 insert_single(*it);
         }
 
+        /// Inserts sorted elements from range [first, last) into the bit map.
+        /// @note Might be innefficient if the origin range is not sorted
+        template <typename Iter>
+        void insert_sorted(const Iter first, const Iter last)
+        {
+            for (Iter it = first; it != last;)
+            {
+                Iter tempit = it;
+                std::size_t group = *it >> _exp;
+                std::size_t current = group;
+                while (current == group && tempit != last)
+                    current = *(++tempit) >> _exp;
+                for (; it < tempit; ++it)
+                    _array[group] |= (1UL << (*it & (_group_size - 1)));
+            }
+        }
+
+        /// Erase a single element from the set.
+        void erase(const std::size_t key) noexcept
+        {
+            erase_single(key);
+        };
+
+        /// Requests the bit set to reduce its capacity to fit its size.
+        template <bool U = DynamicResize>
+        typename std::enable_if<U, void>::type shrink_to_fit()
+        {
+            std::size_t num_groups = std::distance(cbegin(), lower_bound()) + 1;
+            _array.resize(num_groups);
+        }
+
+        ///@}
+
+        ///@{@name Capacity
+
         /// Returns the number of elements the set can hold, the current capacity.
-        /// @parameters: (none)
         std::size_t max_size() const { return _group_size * _array.size(); }
 
-        /// Returns the number of elements the set hold
-        /// @parameters: (none)
+        /// Returns the number of elements the set hold.
         std::size_t size() const { return count(); }
 
         /// Returns the number of elements the set hold (number of set bits).
@@ -115,17 +179,31 @@ namespace nbit
         /// Test whether the bit set is empty
         bool empty() const noexcept { return (lower_bound() >= upper_bound()); }
 
-        /// Clears all data, without resizing the bit set.
-        /// @complexity: Linear in the range of nonzeros of the the bit set.
-        void clear() noexcept { std::fill(begin(), end(), 0); }
-
-        /// resize bit set to support indices up to a new max indice.
-        template <bool U = DynamicResize>
-        typename std::enable_if<U, void>::type resize(std::size_t new_max)
+        /// Returns the index of the last set (1) bit
+        /// @note If the set is empty the return value is undefined (NBIT_UNDEFINED)
+        std::int64_t maximum() const
         {
-            std::size_t num_groups = (new_max / _group_size) + 1;
-            _array.resize(num_groups, 0);
+            if (empty())
+                return NBIT_UNDEFINED;
+            std::size_t group = std::distance(cbegin(), upper_bound()) - 1;
+            int last_bit = (_group_size - 1) - __builtin_clzll(*(lower_bound() - 1));
+            return (group * _group_size) + last_bit;
         }
+
+        /// Returns the index of the first set (1) bit
+        /// @note If the set is empty the return value is undefined (NBIT_UNDEFINED)
+        std::int64_t minimum() const
+        {
+            if (empty())
+                return NBIT_UNDEFINED;
+            std::size_t group = std::distance(cbegin(), lower_bound());
+            int first_bit = __builtin_ctzll(*lower_bound());
+            return (group * _group_size) + first_bit;
+        }
+
+        ///@}
+
+        ///@{@name Operators
 
         bool operator==(const set &other) const
         {
@@ -196,31 +274,6 @@ namespace nbit
             }
         }
 
-        /// Returns the indice of the last set (1) bit.
-        /// @note: if the map is empty the return value is undefined
-        std::int64_t maximum() const
-        {
-            if (empty())
-                return NBIT_UNDEFINED;
-            std::size_t group = std::distance(cbegin(), upper_bound()) - 1;
-            int last_bit = (_group_size - 1) - __builtin_clzll(*(lower_bound() - 1));
-            return (group * _group_size) + last_bit;
-        }
-
-        /// Returns the indice of the first set (1) bit.
-        /// @note: If the set is empty the return value is undefined (NBIT_UNDEFINED)
-        std::int64_t minimum() const
-        {
-            if (empty())
-                return NBIT_UNDEFINED;
-            std::size_t group = std::distance(cbegin(), lower_bound());
-            int first_bit = __builtin_ctzll(*lower_bound());
-            return (group * _group_size) + first_bit;
-        }
-
-        /// Erase a single element from the set.
-        void erase(const std::size_t key) noexcept { erase_single(key); };
-
         /// Decodes the bit set into a vector of indices (of 1 bits) using a
         /// output map function.
         template <typename T = std::uint64_t, typename Function>
@@ -237,30 +290,9 @@ namespace nbit
             return decode_simple<T>(lambda);
         }
 
-        /// Requests the bit set to reduce its capacity to fit its size.
-        template <bool U = DynamicResize>
-        typename std::enable_if<U, void>::type shrink_to_fit()
-        {
-            std::size_t num_groups = std::distance(cbegin(), lower_bound()) + 1;
-            _array.resize(num_groups);
-        }
+        ///@}
 
-        /// Inserts sorted elements from range [first, last) into the bit map.
-        /// @note: Might be innefficient if the origin range is not sorted
-        template <typename Iter>
-        void insert_sorted(const Iter begin, const Iter end)
-        {
-            for (Iter it = begin; it != end;)
-            {
-                Iter tempit = it;
-                std::size_t group = *it >> _exp;
-                std::size_t current = group;
-                while (current == group && tempit != end)
-                    current = *(++tempit) >> _exp;
-                for (; it < tempit; ++it)
-                    _array[group] |= (1UL << (*it & (_group_size - 1)));
-            }
-        }
+        ///@{@name Iterators
 
         /// Returns an iterator to beginning.
         iterator begin() noexcept { return _array.begin(); }
@@ -287,6 +319,7 @@ namespace nbit
             auto reserse_last = std::find_if(_array.rbegin(), _array.rend(), lambda);
             return reserse_last.base();
         }
+        ///@}
 
     private:
         /// Number of bits per group

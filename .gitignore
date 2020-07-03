@@ -2,7 +2,7 @@
 build/
 .vscode/
 /doc/html/
-/doc/latex/
+/doc/docs/
 
 # Prerequisites
 *.d
