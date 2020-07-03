@@ -1,9 +1,9 @@
 #!bin/bash
 
+# compiler="g++ clang++"
+# standard="c++11 c++14 c++17"
 compiler="g++ clang++"
-standard="c++11 c++14 c++17"
-# compiler="g++"
-# standard="c++17"
+standard="c++17 c++2a"
 
 export CATCH_CONFIG_FAST_COMPILE
 for cpp in $compiler
