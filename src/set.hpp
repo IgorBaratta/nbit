@@ -31,6 +31,7 @@
 
 #define NBIT_UNDEFINED -1
 #define DEFAULT_BLOCK_SIZE 65536
+#define IS_POWER_OF_TWO(N) (__builtin_popcountll(N) == 1)
 
 namespace nbit
 {
@@ -354,10 +355,8 @@ namespace nbit
     template <std::size_t N = DEFAULT_BLOCK_SIZE>
     class fixed_set : public set<false>
     {
-        constexpr bool is_power_of_two() { return __builtin_popcountll(N) == 1; };
-
     public:
-        fixed_set() : set(N - 1) { static_assert(is_power_of_two()); }
+        fixed_set() : set(N - 1) { static_assert(IS_POWER_OF_TWO(N)); }
         ~fixed_set() {} // default destructor
     };
 
