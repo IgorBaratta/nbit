@@ -35,6 +35,10 @@
 
 namespace nbit
 {
+
+    using iterator = std::vector<std::uint64_t>::iterator;
+    using const_iterator = std::vector<std::uint64_t>::const_iterator;
+
     template <bool DynamicResize = true>
     class set
     {
@@ -109,7 +113,7 @@ namespace nbit
         }
 
         /// Test whether the bit set is empty
-        bool empty() const noexcept { return (nz_begin() >= nz_end()); }
+        bool empty() const noexcept { return (lower_bound() >= upper_bound()); }
 
         /// Clears all data, without resizing the bit set.
         /// @complexity: Linear in the range of nonzeros of the the bit set.
@@ -192,25 +196,25 @@ namespace nbit
             }
         }
 
-        /// Returns the indice of the last set bit.
+        /// Returns the indice of the last set (1) bit.
         /// @note: if the map is empty the return value is undefined
         std::int64_t maximum() const
         {
             if (empty())
                 return NBIT_UNDEFINED;
-            std::size_t group = std::distance(cbegin(), nz_end()) - 1;
-            int last_bit = (_group_size - 1) - __builtin_clzll(*(nz_begin() - 1));
+            std::size_t group = std::distance(cbegin(), upper_bound()) - 1;
+            int last_bit = (_group_size - 1) - __builtin_clzll(*(lower_bound() - 1));
             return (group * _group_size) + last_bit;
         }
 
-        /// Returns the indice of the first set bit.
+        /// Returns the indice of the first set (1) bit.
         /// @note: If the set is empty the return value is undefined (NBIT_UNDEFINED)
         std::int64_t minimum() const
         {
             if (empty())
                 return NBIT_UNDEFINED;
-            std::size_t group = std::distance(cbegin(), nz_begin());
-            int first_bit = __builtin_ctzll(*nz_begin());
+            std::size_t group = std::distance(cbegin(), lower_bound());
+            int first_bit = __builtin_ctzll(*lower_bound());
             return (group * _group_size) + first_bit;
         }
 
@@ -237,7 +241,7 @@ namespace nbit
         template <bool U = DynamicResize>
         typename std::enable_if<U, void>::type shrink_to_fit()
         {
-            std::size_t num_groups = std::distance(cbegin(), nz_begin()) + 1;
+            std::size_t num_groups = std::distance(cbegin(), lower_bound()) + 1;
             _array.resize(num_groups);
         }
 
@@ -259,41 +263,39 @@ namespace nbit
         }
 
         /// Returns an iterator to beginning.
-        std::vector<std::uint64_t>::iterator begin() { return _array.begin(); }
+        iterator begin() noexcept { return _array.begin(); }
 
-        /// Returns an iterator to the end of bitset
-        /// (past-last element of the array).
-        std::vector<std::uint64_t>::iterator end() { return _array.end(); }
+        /// Returns an iterator to the end of bitset (past-last element of the array).
+        iterator end() noexcept { return _array.end(); }
 
         /// Returns a const_iterator to beginning.
-        std::vector<std::uint64_t>::const_iterator cbegin() const noexcept
-        {
-            return _array.cbegin();
-        }
+        const_iterator cbegin() const noexcept { return _array.cbegin(); }
 
         /// Returns a const_iterator to end os the bit set.
-        std::vector<std::uint64_t>::const_iterator cend() const noexcept
-        {
-            return _array.cend();
-        }
+        const_iterator cend() const noexcept { return _array.cend(); }
 
         /// Return a const iterator poiting to first nonzero group in the set.
-        std::vector<std::uint64_t>::const_iterator nz_begin() const noexcept
+        const_iterator lower_bound() const noexcept
         {
             return std::find_if(cbegin(), cend(), [](std::uint64_t x) { return x; });
         }
 
         /// Return a const iterator poiting to past-last nonzero group in the set.
-        std::vector<std::uint64_t>::const_iterator nz_end() const noexcept
+        const_iterator upper_bound() const noexcept
         {
-            auto reserse_last = std::find_if(_array.rbegin(), _array.rend(),
-                                             [](std::uint64_t x) { return x; });
+            auto lambda = [](std::uint64_t x) { return x; };
+            auto reserse_last = std::find_if(_array.rbegin(), _array.rend(), lambda);
             return reserse_last.base();
         }
 
     private:
+        /// Number of bits per group
         char _group_size = 64;
+
+        /// Log2(_group_size)
         char _exp = 6;
+
+        /// Array of integers that compose the bit set.
         std::vector<std::uint64_t> _array;
 
         /// Resizes the container so it can hold a new max index.
@@ -317,7 +319,7 @@ namespace nbit
         /// Erases a single key from the bit set.
         inline void erase_single(const std::uint64_t key) noexcept
         {
-            if (key < max_size())
+            if (key <= max_size())
             {
                 std::size_t group = key >> _exp;
                 std::size_t pos = key & (_group_size - 1);
@@ -334,7 +336,7 @@ namespace nbit
 
             std::vector<T> out(count());
             std::size_t pos = 0;
-            for (auto it = nz_begin(); it != nz_end(); it++)
+            for (auto it = lower_bound(); it != upper_bound(); it++)
             {
                 std::uint64_t bitset = *it;
                 std::size_t group = std::distance(cbegin(), it);
@@ -351,7 +353,8 @@ namespace nbit
         }
     };
 
-    // Specialization for fixed size bit set
+    /// Bit set specialization for fixed size bit sets
+    /// the template parameter N should be a power of two.
     template <std::size_t N = DEFAULT_BLOCK_SIZE>
     class fixed_set : public set<false>
     {
