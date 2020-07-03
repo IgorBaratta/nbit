@@ -1,6 +1,8 @@
 # build directory
-*build/
-*vscode/
+build/
+.vscode/
+/doc/html/
+/doc/latex/
 
 # Prerequisites
 *.d

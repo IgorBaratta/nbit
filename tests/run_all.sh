@@ -2,8 +2,8 @@
 
 compiler="g++ clang++"
 standard="c++11 c++14 c++17"
-compiler="g++"
-standard="c++17"
+# compiler="g++"
+# standard="c++17"
 
 export CATCH_CONFIG_FAST_COMPILE
 for cpp in $compiler

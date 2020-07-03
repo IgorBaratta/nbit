@@ -1,0 +1,2 @@
+DOXYFILE_ENCODING      = UTF-8
+INPUT                  = ../src

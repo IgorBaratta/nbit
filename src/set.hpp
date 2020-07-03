@@ -37,11 +37,6 @@ namespace nbit
     template <bool DynamicResize = true>
     class set
     {
-    protected:
-        char _group_size = 64;
-        char _exp = 6;
-        std::vector<std::uint64_t> _array;
-
     public:
         /// Default constructor, construct an empty set
         set() : _array(0) {}
@@ -95,15 +90,15 @@ namespace nbit
                 insert_single(*it);
         }
 
-        /// Returns the number of elements the set can hold
+        /// Returns the number of elements the set can hold, the current capacity.
         /// @parameters: (none)
         std::size_t max_size() const { return _group_size * _array.size(); }
 
-        /// returns the number of elements the set hold
+        /// Returns the number of elements the set hold
         /// @parameters: (none)
         std::size_t size() const { return count(); }
 
-        /// returns the number of elements the set hold
+        /// Returns the number of elements the set hold (number of set bits).
         inline std::size_t count() const noexcept
         {
             return std::accumulate(cbegin(), cend(), 0,
@@ -119,7 +114,7 @@ namespace nbit
         /// @complexity: Linear in the range of nonzeros of the the bit set.
         void clear() noexcept { std::fill(begin(), end(), 0); }
 
-        // resize bit set to support indices up to new_max
+        /// resize bit set to support indices up to a new max indice.
         template <bool U = DynamicResize>
         typename std::enable_if<U, void>::type resize(std::size_t new_max)
         {
@@ -196,9 +191,9 @@ namespace nbit
             }
         }
 
-        /// returns the maximum index in the bit set
+        /// Returns the indice of the last set bit.
         /// @note: if the map is empty the return value is undefined
-        std::uint64_t maximum() const
+        std::int64_t maximum() const
         {
             if (empty())
                 return NBIT_UNDEFINED;
@@ -207,9 +202,9 @@ namespace nbit
             return (group * _group_size) + last_bit;
         }
 
-        /// returns the minimum set value in the bit map
-        /// @note: if the map is empty the return value is undefined
-        std::uint64_t minimum() const
+        /// Returns the indice of the first set bit.
+        /// @note: If the set is empty the return value is undefined (NBIT_UNDEFINED)
+        std::int64_t minimum() const
         {
             if (empty())
                 return NBIT_UNDEFINED;
@@ -221,14 +216,15 @@ namespace nbit
         /// Erase a single element from the set.
         void erase(const std::size_t key) noexcept { erase_single(key); };
 
-        /// decode bit set into a vector of indices using a output map function
+        /// Decodes the bit set into a vector of indices (of 1 bits) using a
+        /// output map function.
         template <typename T = std::uint64_t, typename Function>
         std::vector<T> decode(Function fn)
         {
             return decode_simple<T>(fn);
         }
 
-        /// decode bit set into a vector of indices using a output map function
+        /// Decodes the bit set into a vector of indices (of 1 bits).
         template <typename T>
         std::vector<T> decode()
         {
@@ -236,7 +232,7 @@ namespace nbit
             return decode_simple<T>(lambda);
         }
 
-        /// Requests the container to reduce its capacity to fit its size.
+        /// Requests the bit set to reduce its capacity to fit its size.
         template <bool U = DynamicResize>
         typename std::enable_if<U, void>::type shrink_to_fit()
         {
@@ -244,8 +240,8 @@ namespace nbit
             _array.resize(num_groups);
         }
 
-        /// Inserts sorted elements from range [first, last) into the bit map
-        /// @note: Might be innefficient if the origin range of elements is not sorted
+        /// Inserts sorted elements from range [first, last) into the bit map.
+        /// @note: Might be innefficient if the origin range is not sorted
         template <typename Iter>
         void insert_sorted(const Iter begin, const Iter end)
         {
@@ -261,29 +257,32 @@ namespace nbit
             }
         }
 
+        /// Returns an iterator to beginning.
         std::vector<std::uint64_t>::iterator begin() { return _array.begin(); }
 
+        /// Returns an iterator to the end of bitset
+        /// (past-last element of the array).
         std::vector<std::uint64_t>::iterator end() { return _array.end(); }
 
-        /// Returns const_iterator to beginning
+        /// Returns a const_iterator to beginning.
         std::vector<std::uint64_t>::const_iterator cbegin() const noexcept
         {
             return _array.cbegin();
         }
 
-        /// Returns a const_iterator to end
+        /// Returns a const_iterator to end os the bit set.
         std::vector<std::uint64_t>::const_iterator cend() const noexcept
         {
             return _array.cend();
         }
 
-        /// Return a const iterator poiting to first nonzero group in the set
+        /// Return a const iterator poiting to first nonzero group in the set.
         std::vector<std::uint64_t>::const_iterator nz_begin() const noexcept
         {
             return std::find_if(cbegin(), cend(), [](std::uint64_t x) { return x; });
         }
 
-        /// Return a const iterator poiting to past-last nonzero group in the set
+        /// Return a const iterator poiting to past-last nonzero group in the set.
         std::vector<std::uint64_t>::const_iterator nz_end() const noexcept
         {
             auto reserse_last = std::find_if(_array.rbegin(), _array.rend(),
@@ -292,6 +291,11 @@ namespace nbit
         }
 
     private:
+        char _group_size = 64;
+        char _exp = 6;
+        std::vector<std::uint64_t> _array;
+
+        /// Resizes the container so it can hold a new max index.
         template <bool U = DynamicResize>
         void resize_to_fit(std::size_t new_max)
         {
@@ -300,6 +304,7 @@ namespace nbit
                     resize(new_max);
         }
 
+        /// Inserts a single key in the bit set.
         inline void insert_single(const std::uint64_t key) noexcept
         {
             std::size_t group = key >> _exp;
@@ -308,6 +313,7 @@ namespace nbit
             _array[group] |= mask;
         }
 
+        /// Erases a single key from the bit set.
         inline void erase_single(const std::uint64_t key) noexcept
         {
             if (key < max_size())
@@ -315,10 +321,7 @@ namespace nbit
                 std::size_t group = key >> _exp;
                 std::size_t pos = key & (_group_size - 1);
                 std::uint64_t mask = (1UL << pos);
-                if ((_array[group] & (mask)))
-                {
-                    _array[group] ^= mask;
-                }
+                _array[group] ^= mask;
             }
         }
 
