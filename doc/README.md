@@ -1,3 +1,7 @@
+# nbit
+A fast C++ 17 header-only (compressed) bit-set library.
+
+~~~~~~~~~~~~~{.cpp}
 #include "../src/set.hpp"
 #include <algorithm>
 #include <cassert>
@@ -6,9 +10,8 @@
 
 int main()
 {
-    std::uint64_t offset = 10'000'000'000;
+    std::uint64_t offset = 10000;
 
-    // Create vector and s
     std::vector<std::int64_t> vec(64);
     std::iota(vec.begin(), vec.end(), offset);
     std::random_shuffle(vec.begin(), vec.end());
@@ -23,3 +26,5 @@ int main()
     auto sorted_vec = dynamic_set.decode<std::uint64_t>(output_map);
     assert(offset == sorted_vec[0]);
 }
+
+~~~~~~~~~~~~~
