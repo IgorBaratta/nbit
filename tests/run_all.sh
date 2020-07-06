@@ -15,7 +15,8 @@ do
         $cpp -g -std=$std tests_main.cpp -c
         $cpp -g -std=$std tests_dynamic.cpp -c
         $cpp -g -std=$std tests_fixed.cpp -c
-        $cpp -g -std=$std tests_main.o tests_dynamic.o -o tests.out 
+        $cpp -g -std=$std tests_sparse.cpp -c
+        $cpp -g -std=$std tests_main.o tests_dynamic.o tests_fixed.o tests_sparse.o -o tests.out 
         ./tests.out --reporter compact --success
     done
 done
