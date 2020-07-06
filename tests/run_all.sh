@@ -2,7 +2,7 @@
 
 # compiler="g++ clang++"
 # standard="c++11 c++14 c++17"
-compiler="g++ clang++"
+compiler="g++-9 clang++"
 standard="c++17"
 
 export CATCH_CONFIG_FAST_COMPILE
