@@ -1,13 +1,8 @@
 #include "../src/sparse_set.hpp"
-#include <algorithm>
-#include <cassert>
 #include <chrono>
-#include <cstdlib>
 #include <iostream>
-#include <numeric>
 #include <set>
 #include <unordered_set>
-#include <vector>
 
 int main(int argc, char *argv[])
 {
@@ -40,10 +35,8 @@ int main(int argc, char *argv[])
     {
         std::cout << "Using nbit::set" << std::endl;
         nbit::set new_set2;
-        new_set2.insert_sorted(vec.begin(), vec.end());
         start = std::chrono::system_clock::now();
-        // nbit::set new_set;
-        // new_set.insert(vec.begin(), vec.end());
+        new_set2.insert_sorted(vec.begin(), vec.end());
         bool b = (new_set2.count() == size);
         end = std::chrono::system_clock::now();
     }

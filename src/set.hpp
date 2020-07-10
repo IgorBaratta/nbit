@@ -77,7 +77,7 @@ namespace nbit
             insert(list.begin(), list.end());
         }
 
-        /// Assingment operator with a list of integer values.
+        /// Assignment operator with a list of integer values.
         template <typename T>
         set &operator=(std::initializer_list<T> list)
         {
@@ -154,14 +154,14 @@ namespace nbit
         void insert_sorted(const Iter first, const Iter last)
         {
             if constexpr (U)
-                resize_to_fit(*std::max_element(first, last));
+                resize_to_fit(*std::next(last, -1));
             for (Iter it = first; it != last;)
             {
                 std::size_t group = *it >> exp;
-                auto next = std::find_if_not(it, last, [&](auto el) {
+                auto next = std::partition_point(it, last, [&](auto el) {
                     return (el >> exp) == group;
                 });
-                data[group] = std::accumulate(it, next, data[group], [=](auto mask, auto element) {
+                data[group] = std::accumulate(it, next, data[group], [&](auto mask, auto element) {
                     return mask | (1UL << (element & (group_size - 1)));
                 });
                 it = next;
