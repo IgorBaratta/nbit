@@ -19,7 +19,7 @@ TEST_CASE("Test insert sparse set")
     REQUIRE(set.size() == 6);
 
     // decode bitset into a vector of ordered unique values
-    std::vector<int> unique_values = set.decode<int>();
+    std::vector<int> unique_values = set.decode_sort<int>();
     REQUIRE((unique_values == std::vector<int>({1, 2, 4, 20, 25, 64})));
 }
 
@@ -40,8 +40,6 @@ TEST_CASE("Create sparse bitset from container and clear and modify content")
     REQUIRE((unique_values == std::vector<int>({13, 1000004, 1000005, 1000006})));
 
     sparse_set.erase(13);
-    REQUIRE(sparse_set.max_size() == 4096);
-    sparse_set.shrink_to_fit();
     REQUIRE(sparse_set.max_size() == 2048);
 
     sparse_set.clear();

@@ -23,16 +23,17 @@
 #pragma once
 
 #include "set.hpp"
-#include <map>
+#include <unordered_map>
 
 namespace nbit
 {
 
-    template <std::size_t N = DEFAULT_BLOCK_SIZE>
+    template <std::size_t N = DEFAULT_BLOCK_SIZE,
+              class MAP = std::unordered_map<std::uint64_t, fixed_set<N>>>
     class sparse_set
     {
-        using iterator = typename std::map<std::uint64_t, fixed_set<N>>::iterator;
-        using const_iterator = typename std::map<std::uint64_t, fixed_set<N>>::const_iterator;
+        using iterator = typename MAP::iterator;
+        using const_iterator = typename MAP::const_iterator;
 
     public:
         ///@{@name Constructor
@@ -102,20 +103,40 @@ namespace nbit
                 insert_single(*it);
         }
 
-        /// Erase a single element from the set.
-        void erase(const std::size_t key) noexcept
+        /// Inserts sorted elements from range [first, last) into the bit map.
+        /// @note Might be inefficient if the origin range is not sorted
+        template <typename Iter>
+        void insert_sorted(const Iter first, const Iter last)
         {
-            erase_single(key);
-        };
+            static_assert(std::is_integral<typename std::iterator_traits<Iter>::value_type>::value);
+            for (Iter it = first; it != last;)
+            {
+                std::size_t group = *it >> exp;
+
+                auto next = std::partition_point(it, last, [&](auto el) {
+                    return (el >> exp) == group;
+                });
+
+                fixed_set<N> &bitset = data[group];
+                std::for_each(it, next, [&](auto &key) {
+                    std::uint64_t short_key = key & (N - 1);
+                    bitset.insert(short_key);
+                });
+                it = next;
+            }
+        }
+
+        /// Erase a single element from the set.
+        void erase(const std::size_t key) noexcept { erase_single(key); };
 
         /// Requests the sparse bit set to reduce its capacity to fit its size.
-        /// Remove all empty local bitsets
+        /// Remove all empty bitsets
         void shrink_to_fit()
         {
             auto it = begin();
             while (it != end())
             {
-                if ((*it).second.empty())
+                if (it->second.empty())
                     it = data.erase(it);
                 else
                     it++;
@@ -150,8 +171,9 @@ namespace nbit
         {
             if (empty())
                 return NBIT_UNDEFINED;
-            const_iterator it = upper_bound();
-            std::advance(it, -1);
+
+            auto cmp = [](const auto &a, const auto &b) { return a.first < b.first; };
+            const_iterator it = std::max_element(data.begin(), data.end(), cmp);
             return (it->first * N) + it->second.maximum();
         }
 
@@ -162,7 +184,8 @@ namespace nbit
             if (empty())
                 return NBIT_UNDEFINED;
 
-            const_iterator it = lower_bound();
+            auto cmp = [](const auto &a, const auto &b) { return a.first < b.first; };
+            const_iterator it = std::min_element(data.begin(), data.end(), cmp);
             return (it->first * N) + it->second.minimum();
         }
 
@@ -173,53 +196,7 @@ namespace nbit
         /// Returns true if all of the elements in both bit sets match.
         bool operator==(const sparse_set &other) const
         {
-            bool is_equal = true;
-
-            // check the limits first
-            if (other.maximum() != maximum() && other.minimum() != minimum())
-                return false;
-
-            const_iterator current = other.cbegin();
-            for (auto const &[key, bitset] : data)
-            {
-                // get iterator to the first local bitset whose key is equal or greater
-                // than the current key
-                const_iterator next = std::find_if(current, other.cend(),
-                                                   [&, key = key](auto pair) {
-                                                       return (pair.first >= key);
-                                                   });
-
-                if (next->first == key)
-                {
-                    is_equal &= (next->second == bitset);
-                    is_equal &= std::transform_reduce(current, next, true,
-                                                      std::bit_and<>(), [](auto pair) {
-                                                          return pair.second.empty();
-                                                      });
-                }
-                else
-                {
-                    is_equal &= std::transform_reduce(current, std::next(next), true,
-                                                      std::bit_and<>(), [](auto pair) {
-                                                          return pair.second.empty();
-                                                      });
-                }
-                if (!is_equal) // return early
-                    return false;
-
-                std::advance(next, 1);
-                current = next;
-            }
-
-            // check if the remaining local bitsets are empty
-            if (current != other.cend())
-            {
-                is_equal &= std::transform_reduce(current, other.cend(), true,
-                                                  std::bit_and<>(), [](auto pair) {
-                                                      return pair.second.empty();
-                                                  });
-            }
-            return is_equal;
+            return data == other.data;
         }
 
         /// Returns true if at least one of the elements in both bit sets mismatch.
@@ -229,18 +206,20 @@ namespace nbit
         /// @see operator&
         sparse_set &operator&=(const sparse_set &other) noexcept
         {
-            const_iterator current = other.cbegin();
-            for (auto &[key, bitset] : data)
+            iterator it = begin();
+            while (it != end())
             {
-                auto next = std::find_if(current, other.cend(),
-                                         [&, key = key](auto pair) {
-                                             return (pair.first >= key);
-                                         });
-                if (next->first == key)
-                    bitset &= next->second;
+                const_iterator other_it = other.data.find(it->first);
+                if (other_it != cend())
+                {
+                    it->second &= other_it->second;
+                    if (it->second.empty())
+                        it = data.erase(it);
+                    else
+                        it = std::next(it);
+                }
                 else
-                    bitset.clear();
-                current = std::next(next);
+                    it = data.erase(it);
             }
             return *this;
         }
@@ -310,6 +289,35 @@ namespace nbit
             return output;
         }
 
+        /// Decodes the bit set into a vector of sorted indices (of 1 bits).
+        template <typename T>
+        std::vector<T> decode_sort()
+        {
+            std::vector<T> output;
+            output.reserve(count());
+
+            // sort so the output can be also keys
+            std::vector<std::uint64_t> keys;
+            keys.reserve(data.size());
+            for (auto &it : data)
+                keys.push_back(it.first);
+            std::sort(keys.begin(), keys.end());
+
+            for (auto &k : keys)
+            {
+                std::uint64_t offset = N * k;
+                set<false> &bitset = data[k];
+                if (!bitset.empty())
+                {
+                    auto vec = bitset.decode<T>([&offset](auto x) {
+                        return x + offset;
+                    });
+                    output.insert(output.end(), vec.begin(), vec.end());
+                }
+            }
+            return output;
+        }
+
         ///@}
 
         ///@{@name Iterators
@@ -334,20 +342,11 @@ namespace nbit
                 return x.second.empty();
             });
         }
-
-        /// Return a const iterator pointing to past-last nonzero bitset in the sparse set.
-        [[nodiscard]] const_iterator upper_bound() const noexcept
-        {
-            auto reverse = std::find_if_not(data.rbegin(), data.rend(), [](auto x) {
-                return x.second.empty();
-            });
-            return reverse.base();
-        }
         ///@}
 
     public:
         char exp = __builtin_ctzll(N);
-        std::map<std::size_t, fixed_set<N>> data;
+        MAP data;
 
     private:
         /// Inserts a single key in the bit set.
@@ -364,7 +363,9 @@ namespace nbit
             std::size_t block = key >> exp;
             std::size_t short_key = key & (N - 1);
             data[block].erase(short_key);
+            if (data[block].empty())
+                data.erase(block);
         }
-    }; // namespace nbit
+    };
 
 } // namespace nbit

@@ -280,7 +280,7 @@ namespace nbit
         /// Returns a new set formed by the elements that are present in any of the sets.
         set operator|(const set &other) { return set(*this) |= other; }
 
-        /// Performs bitwise XOR, symmetric differenc operator.
+        /// Performs bitwise XOR, symmetric difference operator.
         /// Returns a new set formed by the elements that are present in one of the sets,
         /// but not in the other.
         set operator^(const set &other) { return set(*this) ^= other; }
