@@ -2,7 +2,7 @@
 A fast C++ 17 header-only (compressed) bit-set library.
 
 ![C++ CI](https://github.com/IgorBaratta/nbit/workflows/C++%20CI/badge.svg)
-
+![CI Docker images](https://img.shields.io/docker/cloud/build/igorbaratta/nbit)
 
 ```c++
 #include "../src/set.hpp"
