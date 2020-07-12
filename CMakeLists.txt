@@ -13,9 +13,18 @@ if(COMPILER_SUPPORTS_MARCH_NATIVE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
 endif()
 
-set(CMAKE_CXX_FLAGS "-Wall -Wextra")
+set(CMAKE_CXX_FLAGS "-Werror -Wall -Wextra")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
-add_library(nbit SHARED src/set.hpp)
+enable_testing()
+
+add_library(nbit STATIC 
+            src/set.hpp
+            src/sparse_set.hpp
+            src/par_set.hpp)
+
+add_subdirectory(tests)
+# add_subdirectory(benchmarks)
+
 set_target_properties(nbit PROPERTIES LINKER_LANGUAGE CXX)

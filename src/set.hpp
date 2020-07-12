@@ -299,7 +299,7 @@ namespace nbit
         }
 
         /// Decodes the bit set into a vector of indices (of 1 bits).
-        template <typename T>
+        template <typename T = std::uint64_t>
         std::vector<T> decode()
         {
             auto lambda = [](T x) { return x; };

@@ -269,7 +269,7 @@ namespace nbit
         sparse_set operator-(const sparse_set &other) { return sparse_set(*this) ^= (*this & other); }
 
         /// Decodes the bit set into a vector of indices (of 1 bits).
-        template <typename T>
+        template <typename T = std::uint64_t>
         std::vector<T> decode()
         {
             std::vector<T> output;
