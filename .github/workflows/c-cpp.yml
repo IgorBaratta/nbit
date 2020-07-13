@@ -25,6 +25,10 @@ jobs:
       run: |
           cd build 
           ctest -C Release -T test --output-on-failure
+          lcov --capture --directory . --output-file coverage.info
+          lcov --remove coverage.info '/usr/*' --output-file coverage.info # filter system-files
+          lcov --list coverage.info # debug info
+
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
 
