@@ -11,6 +11,7 @@ RUN apt-get -qq update && \
     clang-10 lldb-10 lld-10\
     libomp-dev\
     git && \
+    lcov && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
