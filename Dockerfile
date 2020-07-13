@@ -27,5 +27,5 @@ RUN git clone https://github.com/google/benchmark.git &&\
     cd benchmark/ &&\
     mkdir build  &&\
     cd build &&\
-    cmake ../ &&\
+    cmake -DCMAKE_BUILD_TYPE=Release .. &&\
     make install

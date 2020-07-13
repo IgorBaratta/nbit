@@ -3,102 +3,40 @@
 #include "generate_synthetic_data.hpp"
 #include <benchmark/benchmark.h>
 #include <map>
+#include <set>
+#include <unordered_set>
+
+constexpr std::size_t N = 65536;
+using map = std::map<std::uint64_t, nbit::fixed_set<N>>;
+using unordered_map = std::map<std::uint64_t, nbit::fixed_set<N>>;
 
 static void CustomArguments(benchmark::internal::Benchmark *b)
 {
-    for (int i = 3; i <= 4; ++i)
-        for (int j = 2; j <= 10; j++)
-            b->Args({(int)std::pow(10, i), j});
+
+    std::vector<int> sizes{100'000, 1'000'000, 10'000'000};
+    std::vector<int> densities{1, 2, 3};
+    for (auto size : sizes)
+        for (auto d : densities)
+            b->Args({size, d});
 }
 
-static void InsertSet(benchmark::State &state)
+template <typename SetType>
+static void InsertUniformData(benchmark::State &state)
 {
     auto vec = uniform_data(state.range(0), state.range(1));
-    nbit::set set;
     for (auto _ : state)
+    {
+        SetType set;
         set.insert(vec.begin(), vec.end());
+        set.clear();
+    }
 }
 
-static void InsertFixedSet(benchmark::State &state)
-{
-    auto vec = uniform_data(state.range(0), state.range(1));
-    nbit::set<false> set(*std::max_element(vec.begin(), vec.end()));
-    for (auto _ : state)
-        set.insert(vec.begin(), vec.end());
-}
-
-static void InsertSparseSet(benchmark::State &state)
-{
-    auto vec = uniform_data(state.range(0), state.range(1));
-    nbit::sparse_set set;
-    for (auto _ : state)
-        set.insert(vec.begin(), vec.end());
-}
-
-static void InsertSparseSetWithMap(benchmark::State &state)
-{
-    constexpr std::size_t N = 65536;
-    using mymap = std::map<std::uint64_t, nbit::fixed_set<N>>;
-    auto vec = uniform_data(state.range(0), state.range(1));
-    nbit::sparse_set<N, mymap> set;
-    for (auto _ : state)
-        set.insert(vec.begin(), vec.end());
-}
-
-static void AndSet(benchmark::State &state)
-{
-    auto vec1 = uniform_data(state.range(0), state.range(1));
-    auto vec2 = uniform_data(state.range(0), state.range(1));
-    nbit::set set1, set2;
-    set1.insert(vec1.begin(), vec1.end());
-    set2.insert(vec2.begin(), vec2.end());
-    for (auto _ : state)
-        auto set3 = set1 & set2;
-}
-
-static void AndSparseSet(benchmark::State &state)
-{
-    auto vec1 = uniform_data(state.range(0), state.range(1));
-    auto vec2 = uniform_data(state.range(0), state.range(1));
-    nbit::sparse_set set1, set2;
-    set1.insert(vec1.begin(), vec1.end());
-    set2.insert(vec2.begin(), vec2.end());
-    for (auto _ : state)
-        auto set3 = set1 & set2;
-}
-
-static void AndSparseSet2048(benchmark::State &state)
-{
-    auto vec1 = uniform_data(state.range(0), state.range(1));
-    auto vec2 = uniform_data(state.range(0), state.range(1));
-    nbit::sparse_set<2048> set1, set2;
-    set1.insert(vec1.begin(), vec1.end());
-    set2.insert(vec2.begin(), vec2.end());
-    for (auto _ : state)
-        auto set3 = set1 & set2;
-}
-
-static void AndSparseSetWithMap(benchmark::State &state)
-{
-    auto vec1 = uniform_data(state.range(0), state.range(1));
-    auto vec2 = uniform_data(state.range(0), state.range(1));
-    constexpr std::size_t N = 65536;
-    using mymap = std::map<std::uint64_t, nbit::fixed_set<N>>;
-    nbit::sparse_set<2048> set1, set2;
-    set1.insert(vec1.begin(), vec1.end());
-    set2.insert(vec2.begin(), vec2.end());
-    for (auto _ : state)
-        auto set3 = set1 & set2;
-}
-
-//Register the function as a benchmark
-BENCHMARK(InsertSet)->Apply(CustomArguments);
-BENCHMARK(InsertFixedSet)->Apply(CustomArguments);
-BENCHMARK(InsertSparseSet)->Apply(CustomArguments);
-BENCHMARK(InsertSparseSetWithMap)->Apply(CustomArguments);
-BENCHMARK(AndSet)->Apply(CustomArguments);
-BENCHMARK(AndSparseSet)->Apply(CustomArguments);
-BENCHMARK(AndSparseSet2048)->Apply(CustomArguments);
-BENCHMARK(AndSparseSetWithMap)->Apply(CustomArguments);
+BENCHMARK_TEMPLATE(InsertUniformData, nbit::set<true>)->Apply(CustomArguments);
+BENCHMARK_TEMPLATE(InsertUniformData, nbit::sparse_set<2048>)->Apply(CustomArguments);
+BENCHMARK_TEMPLATE(InsertUniformData, nbit::sparse_set<N, map>)->Apply(CustomArguments);
+BENCHMARK_TEMPLATE(InsertUniformData, nbit::sparse_set<N, unordered_map>)->Apply(CustomArguments);
+BENCHMARK_TEMPLATE(InsertUniformData, std::set<uint64_t>)->Apply(CustomArguments);
+BENCHMARK_TEMPLATE(InsertUniformData, std::unordered_set<uint64_t>)->Apply(CustomArguments);
 
 BENCHMARK_MAIN();

@@ -83,6 +83,5 @@ namespace nbit::parallel
         par_set operator^(const par_set &other) { return par_set(*this) ^= other; }
 
         ///@}
-
-    }; // namespace nbit
-} // namespace nbit
+    };
+} // namespace nbit::parallel

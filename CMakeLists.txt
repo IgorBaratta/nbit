@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(nbit CXX)
+project(nbit LANGUAGES CXX)
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
@@ -25,6 +25,6 @@ add_library(nbit STATIC
             src/par_set.hpp)
 
 add_subdirectory(tests)
-# add_subdirectory(benchmarks)
+add_subdirectory(benchmarks)
 
 set_target_properties(nbit PROPERTIES LINKER_LANGUAGE CXX)
