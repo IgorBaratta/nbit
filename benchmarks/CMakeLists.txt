@@ -21,7 +21,6 @@ endif()
 
 set(CMAKE_CXX_FLAGS "-Werror -Wall -Wextra")
 
-find_package(GTest REQUIRED)
 find_package(benchmark REQUIRED)
 
 add_executable(nbit_bench benchmark_synthetic.cpp)
