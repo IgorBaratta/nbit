@@ -6,6 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get -qq update && \
     apt-get -y install \
     curl \
+    libtbb-dev\
     cmake \
     g++ \
     clang-10 lldb-10 lld-10\
