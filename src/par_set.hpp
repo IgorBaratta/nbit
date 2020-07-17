@@ -55,7 +55,7 @@ namespace nbit::parallel
             std::transform(policy, begin(), it, other.cbegin(),
                            begin(), std::bit_and<>());
             if (it < end())
-                std::fill(it, end(), 0);
+                std::fill(policy, it, end(), 0);
 
             return *this;
         }

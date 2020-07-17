@@ -159,7 +159,7 @@ namespace nbit
             {
                 std::size_t group = *it >> exp;
                 auto next = std::partition_point(it, last, [&](auto el) {
-                    return (el >> exp) == group;
+                    return std::size_t(el >> exp) == group;
                 });
                 data[group] = std::accumulate(it, next, data[group], [&](auto mask, auto element) {
                     return mask | (1UL << (element & (group_size - 1)));
@@ -231,8 +231,25 @@ namespace nbit
         /// Returns true if all of the elements in both bit sets match.
         bool operator==(const set &other) const
         {
-            return std::equal(this->cbegin(), this->cend(),
-                              other.cbegin(), other.cend());
+            bool is_equal;
+            if (max_size() == other.max_size())
+                is_equal = std::equal(this->cbegin(), this->cend(),
+                                      other.cbegin(), other.cend());
+            else
+            {
+                std::size_t limit = std::min(data.size(), other.data.size());
+                is_equal = std::equal(this->cbegin(), this->cbegin() + limit,
+                                      other.cbegin(), other.cbegin() + limit);
+
+                // note that all_of returns true if the range is empty
+                is_equal &= std::all_of(this->cbegin() + limit, this->cend(), [](auto i) {
+                    return i == 0;
+                });
+                is_equal &= std::all_of(other.cbegin() + limit, other.cend(), [](auto i) {
+                    return i == 0;
+                });
+            }
+            return is_equal;
         }
 
         /// Returns true if at least one of the elements in both bit sets mismatch.
@@ -256,19 +273,31 @@ namespace nbit
         /// @see operator|
         set &operator|=(const set &other)
         {
-            resize_to_fit(static_cast<size_t>(other.maximum()));
+            resize_to_fit(static_cast<size_t>(other.max_size()));
             std::transform(other.cbegin(), other.cend(), this->cbegin(),
                            this->begin(), std::bit_or<>());
             return *this;
         }
 
-        /// Performs bitwise XOR, and assign to the current set.
+        /// Performs symmetric difference between sets, bitwise XOR, and assign to the current set.
         /// @see operator^
         set &operator^=(const set &other)
         {
-            resize_to_fit(static_cast<size_t>(other.maximum()));
-            std::transform(this->cbegin(), this->cend(), other.cbegin(),
+            resize_to_fit(static_cast<size_t>(other.max_size()));
+            std::transform(other.cbegin(), other.cend(), this->cbegin(),
                            this->begin(), std::bit_xor<>());
+            return *this;
+        }
+
+        /// Performs difference, and assign to the current set.
+        /// @see operator^
+        set &operator-=(const set &other)
+        {
+            auto lim = std::min(data.size(), other.data.size());
+            std::transform(this->cbegin(), this->cbegin() + lim, other.cbegin(),
+                           this->begin(), [](auto a, auto b) {
+                               return a & (a ^ b);
+                           });
             return *this;
         }
 
@@ -288,7 +317,7 @@ namespace nbit
         /// Performs the difference operation.
         /// Returns a new set formed by the elements that are present in the first set,
         /// but not in the second one.
-        set operator-(const set &other) { return set(*this) ^= (*this & other); }
+        set operator-(const set &other) { return set(*this) -= other; }
 
         /// Decodes the bit set into a vector of indices (of 1 bits) using a
         /// output map function.
@@ -348,7 +377,7 @@ namespace nbit
 
         /// Resizes the container so it can hold a new max index.
         template <bool U = DynamicResize>
-        void resize_to_fit(std::size_t new_max)
+        void resize_to_fit([[maybe_unused]] std::size_t new_max)
         {
             if constexpr (U)
                 if (max_size() <= new_max)
@@ -384,7 +413,7 @@ namespace nbit
 
             std::vector<T> out(count());
             std::size_t pos = 0;
-            for (auto it = lower_bound(); it != upper_bound(); it++)
+            for (auto it = cbegin(); it != cend(); it++)
             {
                 std::uint64_t bitset = *it;
                 auto group = static_cast<size_t>(std::distance(cbegin(), it));

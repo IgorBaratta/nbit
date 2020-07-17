@@ -114,7 +114,7 @@ namespace nbit
                 std::size_t group = *it >> exp;
 
                 auto next = std::partition_point(it, last, [&](auto el) {
-                    return (el >> exp) == group;
+                    return std::size_t(el >> exp) == group;
                 });
 
                 fixed_set<N> &bitset = data[group];
@@ -210,7 +210,7 @@ namespace nbit
             while (it != end())
             {
                 const_iterator other_it = other.data.find(it->first);
-                if (other_it != cend())
+                if (other_it != other.cend())
                 {
                     it->second &= other_it->second;
                     if (it->second.empty())
@@ -268,30 +268,30 @@ namespace nbit
         /// but not in the second one.
         sparse_set operator-(const sparse_set &other) { return sparse_set(*this) ^= (*this & other); }
 
-        /// Decodes the bit set into a vector of indices (of 1 bits).
-        template <typename T = std::uint64_t>
-        std::vector<T> decode()
-        {
-            std::vector<T> output;
-            output.reserve(count());
-            for (auto it = begin(); it != end(); it++)
-            {
-                std::uint64_t offset = N * it->first;
-                set<false> &bitset = it->second;
-                if (!bitset.empty())
-                {
-                    auto vec = bitset.decode<T>([&](auto x) {
-                        return x + offset;
-                    });
-                    output.insert(output.end(), vec.begin(), vec.end());
-                }
-            }
-            return output;
-        }
+        // /// Decodes the bit set into a vector of indices (of 1 bits).
+        // template <typename T = std::uint64_t>
+        // std::vector<T> decode()
+        // {
+        //     std::vector<T> output;
+        //     output.reserve(count());
+        //     for (auto it = begin(); it != end(); it++)
+        //     {
+        //         std::uint64_t offset = N * it->first;
+        //         set<false> &bitset = it->second;
+        //         if (!bitset.empty())
+        //         {
+        //             auto vec = bitset.decode<T>([&](auto x) {
+        //                 return x + offset;
+        //             });
+        //             output.insert(output.end(), vec.begin(), vec.end());
+        //         }
+        //     }
+        //     return output;
+        // }
 
         /// Decodes the bit set into a vector of sorted indices (of 1 bits).
         template <typename T>
-        std::vector<T> decode_sort()
+        std::vector<T> decode()
         {
             std::vector<T> output;
             output.reserve(count());

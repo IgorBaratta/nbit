@@ -22,8 +22,7 @@ std::vector<std::uint64_t> uniform_data(std::size_t nint, std::size_t exp)
 
 /// Sample nint integers from an binomial discrete distribution in the range of
 /// [0, nint/10^-exp), each with a probability of success equal to 0,75.
-template <typename T>
-std::vector<T> binomial_data(std::size_t nint, std::size_t exp)
+std::vector<std::uint64_t> binomial_data(std::size_t nint, std::size_t exp)
 {
     double density = std::pow(10., -1 * (double)exp);
     std::size_t max_value = nint / density;
@@ -31,7 +30,7 @@ std::vector<T> binomial_data(std::size_t nint, std::size_t exp)
     std::random_device rd;
     std::mt19937 engine(rd());
 
-    std::binomial_distribution<> distribution(max_value, 0.75);
+    std::binomial_distribution<std::uint64_t> distribution(max_value, 0.75);
 
     auto generator = [&engine, &distribution]() { return distribution(engine); };
     std::vector<std::uint64_t> data_vec(nint);
