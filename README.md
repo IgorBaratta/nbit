@@ -7,6 +7,15 @@
 ## Overview 
 _nbit_ fast C++ 17 header-only (compressed) bit-set library.
 
+```c++
+nbit::set set1{1, 500, 323};
+nbit::set set2{2, 55, 400};
+
+auto union_set = set1 | set2; 
+std::vector<int> vec = union_set.decode<int>()
+
+```
+
 ## Installation
  - Just copy _set.hpp_ (and _sparse_set.hpp_) to your C++ project.
 
@@ -76,3 +85,6 @@ int main()
 }
 
 ```
+
+## License
+Licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
