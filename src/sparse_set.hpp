@@ -79,6 +79,12 @@ namespace nbit
 
         ///@} Constructor
 
+        ///@{@name Destructor
+
+        /// Default destructor
+        ~sparse_set() = default;
+        ///@}
+
         ///@{@name Modifiers
 
         /// Clears all data, without resizing the bit set
