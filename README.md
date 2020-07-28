@@ -1,8 +1,61 @@
 # nbit
-A fast C++ 17 header-only (compressed) bit-set library.
+
 
 ![C++ CI](https://github.com/IgorBaratta/nbit/workflows/C++%20CI/badge.svg)
 ![CI Docker images](https://img.shields.io/docker/cloud/build/igorbaratta/nbit)
+
+## Overview 
+_nbit_ fast C++ 17 header-only (compressed) bit-set library.
+
+```c++
+nbit::set set1{1, 500, 323};
+nbit::set set2{2, 55, 400};
+
+auto union_set = set1 | set2; 
+std::vector<int> vec = union_set.decode<int>()
+
+```
+
+## Installation
+ - Just copy _set.hpp_ (and _sparse_set.hpp_) to your C++ project.
+
+## Tests
+Running the tests is simple, and should take approximately 1 minute:
+
+```bash
+mkdir build && cd build
+cmake ..
+make
+make test
+```
+Requires [Google Test](https://github.com/google/googletest).
+
+## Benchmarks
+
+```bash
+mkdir build && cd build
+cmake ..
+make
+```
+There are currently main 3 benchmark:
+```
+./benchmarks/insert
+./benchmarks/intersect
+./benchmarks/union
+```
+that can be filtered by input data or size:
+
+| Benchmark   |      CPU      |  Iterations |
+|----------|-------------:|------:|
+| nbit::set< true>/1000000/1 |   5248268 ns | 125 |
+| std::set<uint64_t>/1000000/1|    827615144 ns   |   1 |
+
+
+
+Requires [googletest](https://github.com/google/googletest) and [google/benchmark](https://github.com/google/benchmark).
+
+
+## Example
 
 ```c++
 #include "../src/set.hpp"
@@ -32,3 +85,6 @@ int main()
 }
 
 ```
+
+## License
+Licensed under the MIT License. See the [LICENSE](LICENSE) file for details.

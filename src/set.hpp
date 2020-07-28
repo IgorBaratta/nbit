@@ -29,9 +29,11 @@
 #include <type_traits>
 #include <vector>
 
-#define NBIT_UNDEFINED -1
-#define DEFAULT_BLOCK_SIZE 65536
-#define IS_POWER_OF_TWO(N) (__builtin_popcountll(N) == 1)
+constexpr std::size_t NBIT_UNDEFINED = -1;
+constexpr std::size_t DEFAULT_BLOCK_SIZE = 65536;
+
+template <typename T>
+constexpr bool IS_POWER_OF_TWO(T N) { return __builtin_popcountll(N) == 1; }
 
 namespace nbit
 {
@@ -231,15 +233,15 @@ namespace nbit
         /// Returns true if all of the elements in both bit sets match.
         bool operator==(const set &other) const
         {
-            bool is_equal;
+            bool is_equal = true;
             if (max_size() == other.max_size())
-                is_equal = std::equal(this->cbegin(), this->cend(),
-                                      other.cbegin(), other.cend());
+                is_equal &= std::equal(this->cbegin(), this->cend(),
+                                       other.cbegin(), other.cend());
             else
             {
                 std::size_t limit = std::min(data.size(), other.data.size());
-                is_equal = std::equal(this->cbegin(), this->cbegin() + limit,
-                                      other.cbegin(), other.cbegin() + limit);
+                is_equal &= std::equal(this->cbegin(), this->cbegin() + limit,
+                                       other.cbegin(), other.cbegin() + limit);
 
                 // note that all_of returns true if the range is empty
                 is_equal &= std::all_of(this->cbegin() + limit, this->cend(), [](auto i) {
@@ -367,10 +369,10 @@ namespace nbit
 
     private:
         /// Number of bits per group
-        char group_size = 64;
+        const static char group_size = 64;
 
         /// Log2(group_size)
-        char exp = 6;
+        const static char exp = 6;
 
         /// Array of integers that compose the bit set.
         std::vector<std::uint64_t> data;
@@ -437,7 +439,6 @@ namespace nbit
     {
     public:
         fixed_set() : set(N - 1) { static_assert(IS_POWER_OF_TWO(N)); }
-        ~fixed_set() = default; // default destructor
     };
 
 } // namespace nbit
